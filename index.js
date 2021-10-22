@@ -1,15 +1,13 @@
 const express = require('express')
-const bodyParser = require('body-parser');
+
 const SSLCommerzPayment = require('sslcommerz')
 require('dotenv').config()
 
 
 const app = express()
-app.use(bodyParser.urlencoded({
-    extended: true
-}));
 app.use(express.json());
-app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+
 const port = 5000;
 
 app.get('/init/:amount', (req, res) => {
