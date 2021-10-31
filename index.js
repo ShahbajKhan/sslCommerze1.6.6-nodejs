@@ -1,30 +1,31 @@
 const express = require('express')
-
+const cors = require('cors');
 const SSLCommerzPayment = require('sslcommerz')
 require('dotenv').config()
 
 
 const app = express()
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const port = 5000;
 
-app.get('/init/:amount', (req, res) => {
-    
+app.get('/init/:amount/:id', (req, res) => {
+    console.log("hitting")
     const data = {
         total_amount: req.params.amount,
         currency: 'BDT',
-        tran_id: 'REF123',
+        tran_id: 'REF1234567',
         success_url: 'http://localhost:5000/success',
         fail_url: 'http://localhost:5000/failure',
         cancel_url: 'http://localhost:5000/cancel',
         ipn_url: 'http://localhost:5000/ipn',
         shipping_method: 'Courier',
-        product_name: 'Computer.',
+        product_name: req.params.id,
         product_category: 'Electronic',
         product_profile: 'general',
-        cus_name: 'Customer Name',
+        cus_name: 'Shabaj',
         cus_email: 'cust@yahoo.com',
         cus_add1: 'Dhaka',
         cus_add2: 'Dhaka',
@@ -52,18 +53,19 @@ app.get('/init/:amount', (req, res) => {
         //process the response that got from sslcommerz 
         //https://developer.sslcommerz.com/doc/v4/#returned-parameters
         if(data.GatewayPageURL){
-            return res.status(200).redirect(data.GatewayPageURL)
+            res.json(data.GatewayPageURL)
         }
         else{
             return res.status(400).json({
                 message: "SSL session was not successful"
             })
         }
+        
     });
 });
 app.post("/success", (req,res)=>{  
     console.log(req.body)
-    res.send(req.body);
+    res.redirect(`http://localhost:3000/success/${req.body.val_id}`)
     
 })
 app.post("/failure", (req,res)=>{
@@ -78,7 +80,19 @@ app.post("/ipn", (req,res)=>{
     console.log(req.body)
     res.send(req.body);
 })
+app.get('/validate/:val_id', (req, res) => {
+    const data = {
+        
+        val_id:req.params.val_id //that you go from sslcommerz response
+    };
+    const sslcommer = new SSLCommerzPayment(process.env.STORE_ID, process.env.STORE_PASSWORD,false) //true for live default false for sandbox
+    sslcommer.validate(data).then(data => {
+        //process the response that got from sslcommerz 
+       // https://developer.sslcommerz.com/doc/v4/#order-validation-api
 
+      console.log(data)
+    });
+}) 
 app.listen(port, () => {
     console.log(`Example app listening at http://localhost:${port}`)
 })
