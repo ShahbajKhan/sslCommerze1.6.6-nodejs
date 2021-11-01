@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.q0qwx.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
@@ -31,7 +31,7 @@ client.connect(err => {
             fail_url: 'http://localhost:5000/failure',
             cancel_url: 'http://localhost:5000/cancel',
             ipn_url: 'http://localhost:5000/ipn',
-            status: 'pending',
+            paymentStatus: 'pending',
             shipping_method: 'Courier',
             product_name: 'Computer',
             product_category: 'Electronic',
@@ -81,40 +81,48 @@ client.connect(err => {
         });
     });
     app.post("/success", async (req, res) => {
-        console.log(req.body)
+        
         const result = await orderCollection.updateOne({ tran_id: req.body.tran_id }, {
             $set: {
                 val_id: req.body.val_id
             }
         })
-        console.log(result)
+        
         res.redirect(`http://localhost:3000/success/${req.body.tran_id}`)
 
     })
-    app.post("/failure", (req, res) => {
-        console.log(req.body)
-        res.send(req.body);
+    app.post("/failure", async (req, res) => {
+        const result = await orderCollection.deleteOne({ tran_id: req.body.tran_id })
+        console.log("failure",result)
+        res.redirect(`http://localhost:3000`)
     })
-    app.post("/cancel", (req, res) => {
-        console.log(req.body)
-        res.send(req.body);
+    app.post("/cancel", async (req, res) => {
+        const result = await orderCollection.deleteOne({ tran_id: req.body.tran_id })
+        console.log("cancel",result)
+        res.redirect(`http://localhost:3000`)
     })
     app.post("/ipn", (req, res) => {
         console.log(req.body)
         res.send(req.body);
     })
-    app.get('/validate/:val_id', (req, res) => {
-        const data = {
+    app.post('/validate', async (req, res) => {
+        const result = await orderCollection.findOne({
+            tran_id: req.body.tran_id
+        })
+       
+        if (result.val_id === req.body.val_id) {
+            const update = await orderCollection.updateOne({ tran_id: req.body.tran_id }, {
+                $set: {
+                    paymentStatus: 'paymentComplete'
+                }
+            })
+            console.log(update);
+            res.send(update.modifiedCount>0)
 
-            val_id: req.params.val_id //that you go from sslcommerz response
-        };
-        const sslcommer = new SSLCommerzPayment(process.env.STORE_ID, process.env.STORE_PASSWORD, false) //true for live default false for sandbox
-        sslcommer.validate(data).then(data => {
-            //process the response that got from sslcommerz 
-            // https://developer.sslcommerz.com/doc/v4/#order-validation-api
-
-            console.log(data)
-        });
+        }
+        else {
+            res.send("Chor detected")
+        }
 
     })
     app.get('/orders/:tran_id', async (req, res) => {
