@@ -13,8 +13,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const port = process.env.PORT || 5000;
+// Env files if necessary:-------------------------------
+// STORE_ID=shahb616fb4239fb42
+// STORE_PASSWORD=shahb616fb4239fb42@ssl
 
-
+// DB_PASS=user1234
+// DB_USER=ssluser
+// DB_NAME=payementssl
+// -----------------------------------------------------
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.q0qwx.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 client.connect(err => {
