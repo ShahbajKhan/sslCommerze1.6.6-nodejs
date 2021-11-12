@@ -18,13 +18,14 @@ const port = process.env.PORT || 5000;
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.q0qwx.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 client.connect(err => {
+    // Create collection
     const orderCollection = client.db("paymentssl").collection("orders");
+
+    // Initialize payment
     app.post('/init', async (req, res) => {
         console.log("hitting")
-
         const productInfo = {
-            ...req.body,
-            total_amount: req.body.price,
+            total_amount: req.body.total_amount,
             currency: 'BDT',
             tran_id: uuidv4(),
             success_url: 'http://localhost:5000/success',
@@ -33,11 +34,12 @@ client.connect(err => {
             ipn_url: 'http://localhost:5000/ipn',
             paymentStatus: 'pending',
             shipping_method: 'Courier',
-            product_name: 'Computer',
+            product_name: req.body.product_name,
             product_category: 'Electronic',
-            product_profile: 'general',
-            cus_name: 'Shabaj',
-            cus_email: 'cust@yahoo.com',
+            product_profile: req.body.product_profile,
+            product_image: req.body.product_image,
+            cus_name: req.body.cus_name,
+            cus_email: req.body.cus_email,
             cus_add1: 'Dhaka',
             cus_add2: 'Dhaka',
             cus_city: 'Dhaka',
@@ -46,7 +48,7 @@ client.connect(err => {
             cus_country: 'Bangladesh',
             cus_phone: '01711111111',
             cus_fax: '01711111111',
-            ship_name: 'Customer Name',
+            ship_name: req.body.cus_name,
             ship_add1: 'Dhaka',
             ship_add2: 'Dhaka',
             ship_city: 'Dhaka',
@@ -62,7 +64,7 @@ client.connect(err => {
 
         // Insert order info
         const result = await orderCollection.insertOne(productInfo);
-        console.log(result);
+        
         const sslcommer = new SSLCommerzPayment(process.env.STORE_ID, process.env.STORE_PASSWORD, false) //true for live default false for sandbox
         sslcommer.init(productInfo).then(data => {
             //process the response that got from sslcommerz 
@@ -93,12 +95,12 @@ client.connect(err => {
     })
     app.post("/failure", async (req, res) => {
         const result = await orderCollection.deleteOne({ tran_id: req.body.tran_id })
-        console.log("failure",result)
+        
         res.redirect(`http://localhost:3000`)
     })
     app.post("/cancel", async (req, res) => {
         const result = await orderCollection.deleteOne({ tran_id: req.body.tran_id })
-        console.log("cancel",result)
+        
         res.redirect(`http://localhost:3000`)
     })
     app.post("/ipn", (req, res) => {
